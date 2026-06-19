@@ -7,7 +7,10 @@ load_dotenv()
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
     api_key=os.getenv("GROQ_API_KEY"),
-    temperature=0.2,
+    temperature=0,
+    model_kwargs={
+        "response_format": {"type": "json_object"}
+    }
 )
 
 def web_search(query: str, max_results: int = 5):
