@@ -28,6 +28,8 @@ import re
 import time
 from urllib import response
 
+from langchain_groq import data
+
 from clients import llm
 from state import ConsultingState
 import state
@@ -159,6 +161,9 @@ Return ONLY valid JSON.
 
     t0 = time.perf_counter()
     response = llm.invoke(prompt)
+
+    print("RAW EXEC RESPONSE:")
+    print(repr(response.content))
     elapsed = time.perf_counter() - t0
 
     fallback = {
@@ -175,7 +180,6 @@ Return ONLY valid JSON.
 
     industry = (data.get("industry") or fallback["industry"]).strip()
     market = (data.get("market") or fallback["market"]).strip()
-
     print("MARKET INTELLIGENCE AGENT FINISHED")
 
     state["status_log"].append(
@@ -286,6 +290,7 @@ Return ONLY valid JSON.
         "entry_strategy": [],
     }
     data = _safe_json(response.content, fallback)
+
     # Guard against a model returning swot as something other than a dict
     if not isinstance(data.get("swot"), dict):
         data["swot"] = fallback["swot"]
@@ -319,13 +324,10 @@ def executive_advisory_agent(state: ConsultingState) -> dict:
     strategy_json = json.dumps(state.get("strategy", {}))
 
     prompt = f"""
-You are a senior McKinsey/Bain strategy partner.
+Return ONLY a valid JSON object.
 
-Industry:
-{state['industry']}
-
-Market:
-{state['market']}
+Industry: {state['industry']}
+Market: {state['market']}
 
 Market Analysis:
 {market_analysis_json}
@@ -333,61 +335,54 @@ Market Analysis:
 Strategy:
 {strategy_json}
 
-Create a realistic executive consulting report.
-
-Use assumptions that fit THIS industry and THIS market.
-Do NOT use generic placeholder values.
-Do NOT reuse example numbers.
-Provide realistic estimates with reasoning.
-
-Return ONLY valid JSON.
+JSON Schema:
 
 {{
-  "executive_summary":"Detailed board-level executive summary of at least 300 words",
+  "executive_summary": "string",
 
   "financials": {{
-    "investment_reasoning":"Explain what drives investment needs",
-    "year1_revenue":"Estimated range",
-    "breakeven_timeline":"Estimated timeline",
-       "key_cost_drivers":[
-          "cost driver",
-          "cost driver",
-          "cost driver",
-          "cost driver"
-      ],
+    "initial_investment": "string",
+    "investment_reasoning": "string",
+    "year1_revenue": "string",
+    "breakeven_timeline": "string",
 
-      "projection":[
-        {{
-          "year":"Year 1",
-          "revenue":"value",
-          "profit":"value"
-        }},
-        {{
-          "year":"Year 2",
-          "revenue":"value",
-          "profit":"value"
-        }},
-        {{
-          "year":"Year 3",
-          "revenue":"value",
-          "profit":"value"
-        }}
-      ]
+    "key_cost_drivers": [
+      "string",
+      "string",
+      "string",
+      "string"
+    ],
+
+    "projection": [
+      {{
+        "year":"Year 1",
+        "revenue":"string",
+        "profit":"string"
+      }},
+      {{
+        "year":"Year 2",
+        "revenue":"string",
+        "profit":"string"
+      }},
+      {{
+        "year":"Year 3",
+        "revenue":"string",
+        "profit":"string"
+      }}
+    ]
   }},
 
-  "recommendations":[
-      "detailed recommendation",
-      "detailed recommendation",
-      "detailed recommendation"
+  "recommendations": [
+    "string",
+    "string",
+    "string"
   ]
 }}
 """
 
     t0 = time.perf_counter()
 
-    response = llm.invoke(
-    prompt + "\n\nReturn ONLY JSON."
-)
+    response = llm.invoke(prompt)
 
     elapsed = time.perf_counter() - t0
     fallback = {
@@ -402,9 +397,16 @@ Return ONLY valid JSON.
     },
     "recommendations": []
 }
-    print("EXECUTIVE RAW RESPONSE:")
-    print(response.content)
+    print("================================")
+    print("EXECUTIVE RAW RESPONSE")
+    print(repr(response.content))
+    print("================================")
+    
     data = _safe_json(response.content, fallback)
+
+    if data.get("executive_summary") == "Not available":
+        print("JSON PARSE FAILED")
+        print(response.content[:2000])
     return {
         "executive_summary": data.get("executive_summary", ""),
         "financials": data.get("financials", {}),
