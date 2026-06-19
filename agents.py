@@ -346,9 +346,9 @@ Return ONLY valid JSON.
   "executive_summary":"Detailed board-level executive summary of at least 300 words",
 
   "financials": {{
-    "investment_reasoning":"Explain what drives investment needs"
-    "year1_revenue":"Estimated range"
-    "breakeven_timeline":"Estimated timeline"
+    "investment_reasoning":"Explain what drives investment needs",
+    "year1_revenue":"Estimated range",
+    "breakeven_timeline":"Estimated timeline",
        "key_cost_drivers":[
           "cost driver",
           "cost driver",
@@ -385,24 +385,25 @@ Return ONLY valid JSON.
 
     t0 = time.perf_counter()
 
-    response = llm.invoke(prompt)
+    response = llm.invoke(
+    prompt + "\n\nReturn ONLY JSON."
+)
 
     elapsed = time.perf_counter() - t0
     fallback = {
-    "executive_summary": "",
+    "executive_summary": "Not available",
     "financials": {
-        "investment_reasoning": "",
-        "initial_investment": "",
-        "year1_revenue": "",
-        "year2_revenue": "",
-        "year3_revenue": "",
-        "breakeven_timeline": "",
+        "initial_investment": "Not available",
+        "investment_reasoning": "Not available",
+        "year1_revenue": "Not available",
+        "breakeven_timeline": "Not available",
         "key_cost_drivers": [],
         "projection": []
     },
     "recommendations": []
 }
-
+    print("EXECUTIVE RAW RESPONSE:")
+    print(response.content)
     data = _safe_json(response.content, fallback)
     return {
         "executive_summary": data.get("executive_summary", ""),
